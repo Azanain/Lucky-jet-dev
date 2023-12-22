@@ -6,7 +6,7 @@ public class ButtonOpenPanel : AbstractButton, IPointerDownHandler
     {
         OnPress();
     }
-    private void OnPress()
+    public virtual void OnPress()
     { 
         ClickAudio();
         OpenNewPanel();
