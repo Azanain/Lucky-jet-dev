@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 6629675174835356584}
   - component: {fileID: 1222231437929334792}
   - component: {fileID: 3887645372319211787}
+  - component: {fileID: 7292380194389440060}
   m_Layer: 5
   m_Name: popup Text
   m_TagString: Untagged
@@ -36,7 +37,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 250, y: 250}
+  m_SizeDelta: {x: 500, y: 500}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1222231437929334792
 CanvasRenderer:
@@ -72,11 +73,24 @@ MonoBehaviour:
     m_FontStyle: 0
     m_BestFit: 1
     m_MinSize: 10
-    m_MaxSize: 60
+    m_MaxSize: 200
     m_Alignment: 4
     m_AlignByGeometry: 0
     m_RichText: 1
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: + 100
+  m_Text: +100
+--- !u!114 &7292380194389440060
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 470433321818377703}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c87908b990c4fe7469654c781d91c0f7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _durationMovingText: 1

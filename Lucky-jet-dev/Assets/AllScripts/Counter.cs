@@ -1,65 +1,53 @@
-﻿using System;
-using System.Collections;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 public class Counter : MonoBehaviour
 {
-    [SerializeField] private Text _textScore;
+    [SerializeField] private Text _texCurrenttScore;
     [SerializeField] private int _numberPossibleMiss;
 
-    private int _score;
+    private int _numberMiss;
+    private float _durationFlying;
+
+    public static int Score;
     private void Awake()
     {
-        //EventManager.TouchRingEvent += AddCoin;
         EventManager.MissRingleEvent += MissRing;
-        EventManager.StartGameEvent += StartCounter;
         EventManager.ReplayGameEvent += Replay;
-        EventManager.PauseGameEvent += PauseCounter;
 
-        if (_textScore == null)
-            _textScore = GetComponentInChildren<Text>();
+        if (_texCurrenttScore == null)
+            _texCurrenttScore = GetComponent<Text>();
 
-        _textScore.text = _score.ToString();
+        _texCurrenttScore.text = Score.ToString();
     }
 
     private void MissRing()
     {
-        throw new NotImplementedException();
+        _numberMiss++;
+
+        if (_numberMiss >= _numberPossibleMiss)
+            EventManager.FailGame();
     }
-    //private void AddCoin()
-    //{
-        
-    //}
     private void Replay()
     {
-        _score = 0;
-        _textScore.text = _score.ToString();
+        Score = 0;
+        _numberMiss = 0;
+        _durationFlying = 0;
+        _texCurrenttScore.text = Score.ToString();
     }
-    private void StartCounter()
-    { 
-        StartCoroutine(ScoreIncrease());
-    }
-    private void PauseCounter()
+    private void Update()
     {
-        if (Plane.StopMoving)
-            StopCoroutine(ScoreIncrease());
-        else
-            StartCoroutine(ScoreIncrease());
-    }
-    private IEnumerator ScoreIncrease()
-    {
-        while (true)
+        if (!Plane.StopMoving)
         {
-            yield return new WaitForSeconds(1);
-            _score++;
-            _textScore.text = _score.ToString();
+            _durationFlying += Time.deltaTime;
+
+            float score = Plane.Speed * _durationFlying;
+            Score = (int)(float)score;
+            _texCurrenttScore.text = Score.ToString();
         }
     }
     private void OnDestroy()
     {
         EventManager.MissRingleEvent -= MissRing;
-        EventManager.StartGameEvent -= StartCounter;
         EventManager.ReplayGameEvent -= Replay;
-        EventManager.PauseGameEvent -= PauseCounter;
     }
 }

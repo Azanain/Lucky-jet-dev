@@ -5,10 +5,10 @@ public static class EventManager
     public static Action StartGameEvent;
     public static Action ReplayGameEvent;
     public static Action PauseGameEvent;
-    //public static Action TouchRingEvent;
     public static Action MissRingleEvent;
-
-    public static Action<int> UpdateScoreEvent;
+    public static Action UpdateScoreEvent;
+    public static Action FailGameEvent;
+    public static Action CirclePassedEvent;
 
     public static void StartGame()
     {
@@ -22,9 +22,21 @@ public static class EventManager
     {
         PauseGameEvent?.Invoke();
     }
-
-    public static void UpdateScore(int value)
+    public static void UpdateScore()
     {
-        UpdateScoreEvent?.Invoke(value);
+        UpdateScoreEvent?.Invoke();
+    }
+    public static void MissRingle()
+    {
+        MissRingleEvent?.Invoke();
+    }
+    public static void FailGame()
+    {
+        PauseGame();
+        FailGameEvent?.Invoke();
+    }
+    public static void CirclePassed()
+    {
+        CirclePassedEvent?.Invoke();
     }
 }

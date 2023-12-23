@@ -1,170 +1,244 @@
 ﻿using UnityEngine;
-using System.Collections;
 
 public class Plane : MonoBehaviour
 {
-	[SerializeField] private Transform _body;
+	[SerializeField] private Transform _moveBody;
+	[SerializeField] private Transform _rotateBody;
 	[SerializeField] private Transform _propeller1;
 	[SerializeField] private Transform _propeller2;
 
 	[Header("Parametrs")]
 	[SerializeField] private float _moveSpeed;
-	[Range(0, 10)] [SerializeField] private float _speedRotate;
+	[SerializeField] private float _speedRotate;
 	[SerializeField] private int _speedIncreaseInterval;
-	[SerializeField] private int _percentIncreaseSpeed;
+	[SerializeField] private float _percentIncreaseSpeed;
+	[SerializeField] private float _speedManeuver;
+	[Range(0, 2), SerializeField] private float _dureationOutPath;
 
 	[Header("KeyCodes")]
 	[SerializeField] private KeyCode _turnLeft;
 	[SerializeField] private KeyCode _turnRight;
-	[SerializeField] private KeyCode _rise;
+	[SerializeField] private KeyCode _up;
 	[SerializeField] private KeyCode _lower;
 
 	[Header("Points")]
 	[SerializeField] private Transform[] _points;
+	public static bool StopMoving { get; private set; }
+	public static float Speed;
 
 	private int _numberPointsPassed;
-	public static bool StopMoving{ get; private set; }
-	private Vector3 _direction1;
-	private Vector3 _direction2;
+	private float _timeReturnToPathLeft, _timeReturnToPathRight, _timeReturnToPathUp, _timeReturnToPathDown;
+	private Vector3 _startPosition;
+	private Quaternion _startRotation;
+	private float _startMoveSpeed;
+	private float _durationFlyingToIncrease = 0;
+
+	private enum TypeDirection { up, down, left, right }
 
 	private void Start()
 	{
+		Speed = _moveSpeed;
 		StopMoving = true;
 		EventManager.StartGameEvent += StartMoving;
 		EventManager.ReplayGameEvent += Replay;
 		EventManager.PauseGameEvent += Pause;
 
-		StartCoroutine(Countdown());
+		_startPosition = _moveBody.position;
+		_startRotation = _moveBody.rotation;
+		_startMoveSpeed = _moveSpeed;
 	}
 	void Update()
 	{
 		RotatePropeller();
 
 		if (!StopMoving)
+		{
 			Move();
 
-		if (Input.GetKey(_turnLeft))
-		{
-			//RotateToDirection(-_body.right);
-			RotateSlant(-_body.forward);
-			_direction1 = _body.forward;
+			if (Input.GetKey(_turnLeft))
+			{
+				if (_timeReturnToPathLeft < _dureationOutPath)
+				{
+					_timeReturnToPathLeft += Time.deltaTime;
 
-		}
-		else if (Input.GetKey(_turnRight))
-		{
-			//RotateToDirection(_body.right);
-			RotateSlant(_body.forward);
-			_direction1 = _body.forward;
-		}
-		else
-		{
-			_direction1 = Vector3.zero;
-			RotateToDirection(_points[GetNumberNextPoint()].position);
+					Maneuver(TypeDirection.right);
+					_moveBody.Translate(Vector3.left * _moveSpeed / _speedManeuver);
+				}
+			}
+			else if (Input.GetKey(_turnRight))
+			{
+				if (_timeReturnToPathRight < _dureationOutPath)
+				{
+					_timeReturnToPathRight += Time.deltaTime;
+
+					Maneuver(TypeDirection.left);
+					_moveBody.Translate(Vector3.right * _moveSpeed / _speedManeuver);
+				}
+			}
+			else
+			{
+				if (_timeReturnToPathLeft > 0)
+					ReturnToPath(TypeDirection.left);
+
+				if (_timeReturnToPathRight > 0)
+					ReturnToPath(TypeDirection.right);
+
+				LookAtNextPoint();
+				//_moveBody.LookAt(_points[GetNumberNextPoint()]);
+			}
+
+
+			if (Input.GetKey(_up))
+			{
+				if (_timeReturnToPathUp < _dureationOutPath)
+				{
+					_timeReturnToPathUp += Time.deltaTime;
+
+					Maneuver(TypeDirection.up);
+					_moveBody.Translate(Vector3.up * _moveSpeed / _speedManeuver);
+				}
+			}
+			else if (Input.GetKey(_lower))
+			{
+				if (_timeReturnToPathDown < _dureationOutPath)
+				{
+					_timeReturnToPathDown += Time.deltaTime;
+
+					Maneuver(TypeDirection.down);
+					_moveBody.Translate(Vector3.down * _moveSpeed / _speedManeuver);
+				}
+			}
+			else
+			{
+				if (_timeReturnToPathUp > 0)
+					ReturnToPath(TypeDirection.up);
+
+				if (_timeReturnToPathDown > 0)
+					ReturnToPath(TypeDirection.down);
+			}
 		}
 
-		if (Input.GetKey(_rise))
-		{
-			RotateSlant(-_body.right);
-			_direction2 = _body.forward;
-		}
-		else if (Input.GetKey(_lower))
-		{
-			RotateSlant(_body.right);
-			_direction2 = _body.forward;
-		}
-		else
-		{
-			_direction2 = Vector3.zero;
-			RotateToDirection(_points[GetNumberNextPoint()].position);
-		}
-	}
-    private void Pause()
-    {
 		if (!StopMoving)
 		{
-			StopMoving = true;
-			//StopCoroutine(Moving());
+			_durationFlyingToIncrease += Time.deltaTime;
+
+			if (_durationFlyingToIncrease >= _speedIncreaseInterval)
+			{
+				float percent = _percentIncreaseSpeed / 100 + 1;
+				Debug.Log(percent);
+				_durationFlyingToIncrease = 0;
+				_moveSpeed *= percent;
+				Speed = _moveSpeed;
+			}
 		}
-        else
-        {
-            StopMoving = false;
-            //StartCoroutine(Moving());
-        }
-    }
-    private void StartMoving()
+	}
+	private void LookAtNextPoint()
+	{
+		Vector3 direction = _points[GetNumberNextPoint()].position - _moveBody.position;
+		Quaternion rotation = Quaternion.LookRotation(direction);
+		_moveBody.rotation = Quaternion.Lerp(_moveBody.rotation, rotation, _speedRotate * Time.deltaTime);
+	}
+	private void ReturnToPath(TypeDirection typeDirection)
+	{
+		switch (typeDirection)
+		{
+			case TypeDirection.up:
+				_timeReturnToPathUp -= Time.deltaTime;
+				Maneuver(TypeDirection.down);
+				_moveBody.Translate(Vector3.down * _moveSpeed / _speedManeuver);
+				break;
+			case TypeDirection.down:
+				_timeReturnToPathDown -= Time.deltaTime;
+				Maneuver(TypeDirection.up);
+				_moveBody.Translate(Vector3.up * _moveSpeed / _speedManeuver);
+				break;
+			case TypeDirection.left:
+				_timeReturnToPathLeft -= Time.deltaTime;
+				Maneuver(TypeDirection.left);
+				_moveBody.Translate(Vector3.right * _moveSpeed / _speedManeuver);
+				break;
+			case TypeDirection.right:
+				_timeReturnToPathRight -= Time.deltaTime;
+				Maneuver(TypeDirection.right);
+				_moveBody.Translate(Vector3.left * _moveSpeed / _speedManeuver);
+				break;
+			default:
+				break;
+		}
+	}
+	private void Maneuver(TypeDirection direction)
+	{
+		switch (direction)
+		{
+			case TypeDirection.up:
+				_rotateBody.Rotate(-_rotateBody.right * .1f);
+				break;
+			case TypeDirection.down:
+				_rotateBody.Rotate(_rotateBody.right * .1f);
+				break;
+			case TypeDirection.left:
+				_rotateBody.Rotate(-_rotateBody.forward * .1f);
+				break;
+			case TypeDirection.right:
+				_rotateBody.Rotate(_rotateBody.forward * .1f);
+				break;
+			default:
+				break;
+		}
+	}
+	private void Pause()
+	{
+		StopMoving = !StopMoving;
+	}
+	private void StartMoving()
 	{
 		StopMoving = false;
-		//StartCoroutine(Moving());
-	}
-	public void OnReplayGame()
-	{
-		_numberPointsPassed = 0;
-		_body.transform.position = _points[0].position;
 	}
 	private int GetNumberNextPoint()
 	{
-		return _numberPointsPassed < _points.Length ? _numberPointsPassed + 1 : 0;
+		int number = 0;
+
+		if (_numberPointsPassed < _points.Length)
+			number = _numberPointsPassed + 1;
+		else
+		{
+			number = 0;
+			EventManager.CirclePassed();
+		}
+
+		return number;
 	}
 	private void Move()
 	{
-		Vector3 direction = _direction1 != Vector3.zero || _direction2 != Vector3.zero ? _direction1 + _direction2 : _points[GetNumberNextPoint()].position;
+		_moveBody.position = Vector3.MoveTowards(_moveBody.position, _points[GetNumberNextPoint()].position, _moveSpeed * Time.deltaTime);
 
-		_body.position = Vector3.MoveTowards(_body.position, direction/*_points[GetNumberNextPoint()].position*/, _moveSpeed * Time.deltaTime);
-
-		if (_body.position == _points[GetNumberNextPoint()].position)
+		if (_moveBody.position == _points[GetNumberNextPoint()].position)
 			_numberPointsPassed = GetNumberNextPoint();
-	}
-	//public IEnumerator Moving()
-	//{
-  //      while (!StopMoving)
-  //      {
-		//	_body.position = Vector3.MoveTowards(_body.position, _points[GetNumberNextPoint()].position, _moveSpeed * Time.deltaTime);
-
-		//	if (_body.position == _points[GetNumberNextPoint()].position)
-		//		_numberPointsPassed = GetNumberNextPoint();
-
-		//	yield return null;
-  //      }
-		//if (StopMoving)
-		//	yield return null;
-	//}
-	private IEnumerator Countdown()
-	{
-        while (!StopMoving)
-        {
-			yield return new WaitForSeconds(_speedIncreaseInterval);
-			int percent = _percentIncreaseSpeed / 100 + 1;
-			_moveSpeed *= percent;
-			StartCoroutine(Countdown());
-        }
-		if (StopMoving)
-			yield return null;
 	}
 	private void RotatePropeller()
 	{
 		_propeller1.Rotate(1000 * Time.deltaTime, 0, 0);
 		_propeller2.Rotate(50 * Time.deltaTime, 0, 0);
 	}
-    private void RotateToDirection(Vector3 direction)
-    {
-        Vector3 dir = direction.normalized;
-        Quaternion toRotation = Quaternion.LookRotation(dir, Vector3.up);
-        _body.rotation = Quaternion.RotateTowards(_body.rotation, toRotation, _speedRotate * Time.deltaTime);
-    }
-    private void RotateSlant(Vector3 slantDirection)
-    {
-        _body.Rotate(100 * Time.deltaTime * slantDirection);
-    }
-	private void Replay()
+	public void Replay()
 	{
 		StopMoving = false;
-		//StopCoroutine(Moving());
 		_numberPointsPassed = 0;
-		_body.position = _points[0].position;
-		//StartCoroutine(Moving());
+
+		_timeReturnToPathDown = 0;
+		_timeReturnToPathLeft = 0;
+		_timeReturnToPathRight = 0;
+		_timeReturnToPathUp = 0;
+
+		_moveSpeed = _startMoveSpeed;
+		Speed = _moveSpeed;
+		_durationFlyingToIncrease = 0;
+
+		_moveBody.position = _startPosition;
+		_moveBody.rotation = _startRotation;
 	}
-    private void OnDestroy()
-    {
+	private void OnDestroy()
+	{
 		EventManager.StartGameEvent -= StartMoving;
 		EventManager.ReplayGameEvent -= Replay;
 		EventManager.PauseGameEvent -= Pause;

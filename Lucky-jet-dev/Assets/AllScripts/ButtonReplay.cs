@@ -12,6 +12,6 @@ public class ButtonReplay : MonoBehaviour, IPointerDownHandler
     }
     public void OnPointerDown(PointerEventData eventData)
     {
-        _plane.OnReplayGame();
+        _plane.Replay();
     }
 }
